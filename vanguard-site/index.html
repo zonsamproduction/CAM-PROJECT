@@ -1,0 +1,766 @@
+<title>Vanguard Premium Apparel</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
+<!--
+  LINKS
+  Placeholders (href="#"): clicking shows a "coming soon" toast. Replace href="#" with the real file to connect.
+    - Logo ............... data-next="index.html"
+    - COLLECTIONS ........ data-next="collections.html"
+    - ABOUT .............. data-next="about.html"
+    - Bag icon ........... data-next="cart.html"
+    - EXPLORE COLLECTION . data-next="collection-fw24.html"
+  Connected:
+    - Orange FIRSTCAM tag -> firstcam.html (keep it in the same folder as this page).
+      Opening it plays a hand-off animation; firstcam.html finishes it with a matching fade-in.
+
+  3D: pure CSS 3D transforms, so it runs without WebGL.
+-->
+<style>
+@view-transition{navigation:auto}
+/* Layout: one-screen hero. Two separate hang tags on their own strings, side by side in one CSS-3D scene; nav pinned top, season + CTA pinned bottom. Single dark look by design. */
+:root{
+  --ink:#0a0a0b;
+  --ink-raise:#161618;
+  --line:#34312e;
+  --text:#ede8e2;      /* ~16:1 on ink */
+  --text-2:#d2cbc4;    /* ~12:1 */
+  --muted:#a9a29b;     /* ~7:1 */
+  --orange:#ff5a1f;    /* ~6.7:1 on ink */
+  --orange-soft:rgba(255,90,31,.10);
+  --orange-line:rgba(255,90,31,.55);
+  --on-orange:#170802; /* ~7:1 on orange */
+  --cream:#FFFEF8; --navy:#100B66; --crimson:#CD0046;   /* FIRSTCAM poster palette */
+  --string:#c9b592;
+  --font:"Manrope","Helvetica Neue",Arial,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --ease-out:cubic-bezier(.23,1,.32,1);
+  --u:4px;             /* 1/100 of tag height, set by script */
+  --noise:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .08 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{margin:0;background:var(--ink);color:var(--text);font-family:var(--font);overflow:hidden;-webkit-font-smoothing:antialiased}
+
+/* ---------- backdrop ---------- */
+.bg{position:fixed;inset:0;overflow:hidden;transition:opacity .6s var(--ease-out);
+  background:
+    repeating-linear-gradient(90deg, rgba(255,255,255,.017) 0 1px, transparent 1px 64px),
+    radial-gradient(ellipse 90% 90% at 50% 42%, #161413 0%, var(--ink) 75%)}
+.spot{position:absolute;left:0;top:0;width:1200px;height:1200px;margin:-600px 0 0 -600px;border-radius:50%;
+  background:radial-gradient(circle, rgba(255,128,70,.13), rgba(255,90,31,.045) 38%, transparent 66%);will-change:transform}
+#dust{position:absolute;inset:0;width:100%;height:100%}
+
+/* ---------- 3D scene ---------- */
+.scene{position:fixed;inset:0;perspective:1600px;perspective-origin:50% 38%;overflow:hidden}
+.world{position:absolute;inset:0;transform-style:preserve-3d;transform-origin:50% 40%;will-change:transform}
+.rig,.hang{position:absolute;left:0;top:0;width:0;height:0;transform-style:preserve-3d;will-change:transform}
+.strand{position:absolute;left:-.7px;width:1.4px;transform-origin:50% 100%;
+  background:linear-gradient(90deg,#8d7c5f,var(--string) 45%,#e3d3b2 60%,#8d7c5f);transition:opacity .4s}
+.glow{position:absolute;width:calc(var(--u)*120);height:calc(var(--u)*120);left:calc(var(--u)*-60);top:calc(var(--u)*-17);
+  border-radius:50%;pointer-events:none;transform:translateZ(-140px);transition:opacity .5s}
+#rigV .glow{background:radial-gradient(circle, rgba(255,140,90,.10), transparent 62%)}
+#rigF .glow{background:radial-gradient(circle, rgba(255,90,31,.22), transparent 60%)}
+
+.tag3d{position:absolute;display:block;
+  left:calc(var(--u)*-25);top:calc(var(--u)*-7);width:calc(var(--u)*50);height:calc(var(--u)*100);
+  --t:max(2px, calc(var(--u)*.9));
+  transform-style:preserve-3d;transform-origin:calc(var(--u)*25) calc(var(--u)*7);
+  color:inherit;text-decoration:none;outline:none;cursor:grab;touch-action:none;
+  user-select:none;-webkit-user-select:none;-webkit-user-drag:none;-webkit-tap-highlight-color:transparent;
+  --shF:0;--shB:.5;--shx:0%;--sho:.5}
+#tagF{cursor:pointer}
+.tag3d.dragging{cursor:grabbing}
+.face{position:absolute;inset:0;border-radius:calc(var(--u)*1.2);overflow:hidden;
+  backface-visibility:hidden;-webkit-backface-visibility:hidden;
+  -webkit-mask:radial-gradient(circle at 50% 7%, transparent calc(var(--u)*2.2), #000 calc(var(--u)*2.2 + .7px));
+          mask:radial-gradient(circle at 50% 7%, transparent calc(var(--u)*2.2), #000 calc(var(--u)*2.2 + .7px));
+  transition:opacity .45s var(--ease-out)}
+.front{transform:translateZ(calc(var(--t) / 2))}
+.back{transform:rotateY(180deg) translateZ(calc(var(--t) / 2))}
+.edge{position:absolute;transition:opacity .4s}
+.el,.er{top:calc(var(--u)*1.2);height:calc(100% - var(--u)*2.4);width:var(--t);transform:rotateY(90deg)}
+.el{left:calc(var(--t) / -2)} .er{left:calc(100% - var(--t) / 2)}
+.et,.eb{left:calc(var(--u)*1.2);width:calc(100% - var(--u)*2.4);height:var(--t);transform:rotateX(90deg)}
+.et{top:calc(var(--t) / -2)} .eb{top:calc(100% - var(--t) / 2)}
+#tagV .edge{background:linear-gradient(#2c2c2f,#161618)}
+#tagF .edge{background:linear-gradient(#e2531a,#b93e0c)}
+.loop{position:absolute;left:calc(var(--u)*23.5);top:calc(var(--u)*-5.2);width:calc(var(--u)*3);height:calc(var(--u)*13.2);
+  border:max(1.2px, calc(var(--u)*.36)) solid var(--string);border-radius:50%;transform:rotateY(90deg);transition:opacity .4s}
+
+.fi{position:absolute;inset:0}
+.shade,.sheen{position:absolute;pointer-events:none}
+.shade{inset:0;background:#000}
+.front .shade{opacity:var(--shF)} .back .shade{opacity:var(--shB)}
+.sheen{inset:-40% -60%;opacity:var(--sho);transform:translateX(var(--shx));
+  background:linear-gradient(105deg, transparent 38%, rgba(255,255,255,.16) 48%, rgba(255,255,255,.05) 53%, transparent 62%)}
+.tag3d:focus-visible .fi{box-shadow:inset 0 0 0 2px #fff, inset 0 0 0 4px var(--orange)}
+.grom{position:absolute;left:calc(var(--u)*21.6);top:calc(var(--u)*3.6);width:calc(var(--u)*6.8);height:calc(var(--u)*6.8);border-radius:50%;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.14), inset 0 -1px 1px rgba(0,0,0,.45)}
+.abs{position:absolute}
+.bc{display:block}
+.bc rect{fill:currentColor}
+
+/* Vanguard tag */
+.vg{background:
+    var(--noise),
+    repeating-linear-gradient(115deg, rgba(255,255,255,.03) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(115deg, rgba(0,0,0,.10) 0 2px, transparent 2px 7px),
+    linear-gradient(160deg,#323236,#242427 55%,#1b1b1e)}
+.vg .grom{background:#151517}
+.vg-head{left:calc(var(--u)*7);top:calc(var(--u)*15);margin:0;color:var(--orange);font-weight:600;font-size:calc(var(--u)*4.1);line-height:1.12;letter-spacing:-.01em}
+.vg-logo{left:calc(var(--u)*7);top:calc(var(--u)*68);display:flex;align-items:center;gap:calc(var(--u)*1.3);color:var(--orange);font-weight:800;font-size:calc(var(--u)*4);letter-spacing:.01em}
+.vg-logo svg{width:calc(var(--u)*3.7);height:calc(var(--u)*3.7);fill:currentColor}
+.band{left:0;right:0;top:calc(var(--u)*77);bottom:0}
+.vg .band{background:rgba(0,0,0,.26);border-top:1px solid rgba(255,255,255,.14)}
+.small{font-family:var(--mono);font-weight:700;font-size:calc(var(--u)*1.25);letter-spacing:.2em;text-transform:uppercase;white-space:nowrap}
+.vg-url{left:calc(var(--u)*7);top:calc(var(--u)*79.6);color:var(--orange)}
+.arr{right:calc(var(--u)*7);top:calc(var(--u)*79.2);width:calc(var(--u)*2.4);height:calc(var(--u)*2.4)}
+.rule{left:calc(var(--u)*7);right:calc(var(--u)*7);height:1px}
+.vg .rule{background:rgba(255,255,255,.10)}
+.vg-bc{left:calc(var(--u)*7);top:calc(var(--u)*85.6);width:calc(var(--u)*17);height:calc(var(--u)*7.6);color:var(--orange)}
+
+.vb{left:calc(var(--u)*7);right:calc(var(--u)*7);top:calc(var(--u)*12);display:flex;flex-direction:column;gap:calc(var(--u)*2);color:#efeae4}
+.lock{display:flex;align-items:center;justify-content:center;gap:calc(var(--u)*1);font-weight:800;font-size:calc(var(--u)*2.5);letter-spacing:.06em;padding-bottom:calc(var(--u)*2.2);border-bottom:1px solid rgba(255,255,255,.14)}
+.lock svg{width:calc(var(--u)*2.4);height:calc(var(--u)*2.4);fill:currentColor}
+.k{display:block;font-family:var(--mono);font-weight:700;font-size:calc(var(--u)*1.6);letter-spacing:.18em;text-transform:uppercase;color:#b3aba3}
+.v{display:block;font-weight:600;font-size:calc(var(--u)*3);line-height:1.2;margin-top:calc(var(--u)*.4)}
+.chips{display:flex;gap:calc(var(--u)*.9);margin-top:calc(var(--u)*.8)}
+.chips span{flex:1;display:grid;place-items:center;height:calc(var(--u)*4.4);font-weight:700;font-size:calc(var(--u)*1.75);border:1px solid rgba(255,255,255,.32)}
+.chips .on{background:var(--orange);border-color:var(--orange);color:var(--on-orange)}
+.care{display:flex;gap:calc(var(--u)*2.2);margin-top:calc(var(--u)*.8)}
+.care svg{width:calc(var(--u)*4.2);height:calc(var(--u)*4.2);fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.price{display:block;color:var(--orange);font-weight:800;font-size:calc(var(--u)*5);letter-spacing:-.02em;line-height:1}
+.vb-foot{left:calc(var(--u)*7);right:calc(var(--u)*7);top:calc(var(--u)*79.6);display:flex;justify-content:space-between;color:#efeae4}
+.vb-foot span:last-child{color:#b3aba3}
+.vb-bc{right:calc(var(--u)*7);top:calc(var(--u)*85.6);width:calc(var(--u)*15);height:calc(var(--u)*6);color:#efeae4}
+.vb-num{right:calc(var(--u)*7);top:calc(var(--u)*92.6);width:calc(var(--u)*15);text-align:center;color:#b3aba3;font-size:calc(var(--u)*1.1);letter-spacing:.12em}
+
+/* FIRSTCAM tag: orange front, poster-palette back */
+.fcf{background:var(--noise), linear-gradient(165deg,#ff6a2e,#ff5a1f 45%,#f04d12);color:var(--on-orange)}
+.fcf .grom{background:#d9470f}
+.fc-no{left:calc(var(--u)*7);top:calc(var(--u)*14)}
+.fc-word{left:calc(var(--u)*7);top:calc(var(--u)*18.5);margin:0;font-weight:800;font-size:calc(var(--u)*8.6);line-height:.9;letter-spacing:-.035em}
+.fc-sub{left:calc(var(--u)*7);right:calc(var(--u)*7);top:calc(var(--u)*39);margin:0;font-weight:600;font-size:calc(var(--u)*2.15);line-height:1.3}
+.fc-list{left:calc(var(--u)*7);right:calc(var(--u)*7);top:calc(var(--u)*50);margin:0;padding:0;list-style:none;display:grid;gap:calc(var(--u)*1.1);
+  font-family:var(--mono);font-weight:700;font-size:calc(var(--u)*1.35);letter-spacing:.14em;text-transform:uppercase}
+.fc-list li{display:flex;justify-content:space-between;border-top:1px solid rgba(23,8,2,.28);padding-top:calc(var(--u)*1.1)}
+.fcf .band{background:rgba(23,8,2,.07);border-top:1px solid rgba(23,8,2,.22)}
+.fc-open{left:calc(var(--u)*7);top:calc(var(--u)*80.6)}
+.fc-btn{right:calc(var(--u)*7);top:calc(var(--u)*79);width:calc(var(--u)*5.6);height:calc(var(--u)*5.6);border-radius:50%;background:var(--on-orange);color:var(--orange);display:grid;place-items:center}
+.fc-btn svg{width:45%;height:45%}
+.fcf .vg-bc{color:var(--on-orange);width:calc(var(--u)*15)}
+
+.fcb{background:var(--noise), var(--cream);color:var(--navy)}
+.fcb .grom{background:#e9e7ef}
+.fcb-k{left:calc(var(--u)*7);top:calc(var(--u)*14);color:var(--crimson)}
+.fcb-word{left:calc(var(--u)*7);top:calc(var(--u)*18.5);margin:0;font-weight:800;font-size:calc(var(--u)*8.6);line-height:.9;letter-spacing:-.035em}
+.fcb-strip{left:0;right:0;top:calc(var(--u)*39);padding:calc(var(--u)*2.2) calc(var(--u)*7);background:var(--crimson);color:#fff;
+  display:grid;grid-template-columns:1fr 1fr;gap:calc(var(--u)*1.2) calc(var(--u)*2)}
+.fcb-strip .small{font-size:calc(var(--u)*1.3);letter-spacing:.14em}
+.fcb-count{left:calc(var(--u)*7);right:calc(var(--u)*7);top:calc(var(--u)*55)}
+.fcb-count b{display:block;font-weight:800;font-size:calc(var(--u)*5.4);line-height:1;letter-spacing:-.02em}
+.fcb-count span{display:block;margin-top:calc(var(--u)*.8);font-weight:600;font-size:calc(var(--u)*2);color:#3a3685}
+.fcb .band{background:var(--navy)}
+.fcb-open{left:calc(var(--u)*7);top:calc(var(--u)*80.6);color:var(--cream)}
+.fcb .vg-bc{color:var(--cream);width:calc(var(--u)*15)}
+.fcb .fc-btn{background:var(--crimson);color:#fff}
+
+/* captions under each tag */
+.cap{position:absolute;left:0;top:0;transform:translate(-50%,0);display:inline-flex;align-items:center;gap:8px;white-space:nowrap;
+  padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:rgba(14,14,15,.8);
+  color:var(--text-2);font:700 11px/1 var(--font);letter-spacing:.14em;text-transform:uppercase;text-decoration:none;cursor:pointer;
+  transition:opacity .35s, background .2s, color .2s, border-color .2s}
+.cap svg{width:12px;height:12px;flex:none}
+.cap:hover,.cap.hot{border-color:var(--orange-line);color:var(--orange)}
+#capF{border-color:var(--orange-line);color:var(--text)}
+#capF svg{color:var(--orange)}
+#capF:hover,#capF.hot{background:var(--orange);color:var(--on-orange);border-color:var(--orange)}
+#capF:hover svg,#capF.hot svg{color:var(--on-orange)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--orange);animation:pulse 2.2s ease-out infinite}
+#capF.hot .dot,#capF:hover .dot{background:var(--on-orange);animation:none}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,90,31,.55)}70%{box-shadow:0 0 0 8px rgba(255,90,31,0)}100%{box-shadow:0 0 0 0 rgba(255,90,31,0)}}
+
+/* inspect mode (Vanguard flipped): the other tag steps back */
+.world.inspect #rigF .face,.world.inspect #rigF .edge,.world.inspect #capF{opacity:.18}
+.world.inspect #rigF .tag3d,.world.inspect #capF{pointer-events:none}
+.world.inspect #capV{opacity:0;pointer-events:none}
+body.inspect .foot,body.inspect .hint{opacity:0;pointer-events:none}
+.put-back{position:fixed;left:50%;z-index:6;bottom:calc(34px + env(safe-area-inset-bottom,0px));transform:translate(-50%,10px);margin:0;
+  padding:9px 16px;border-radius:999px;border:1px solid var(--line);background:rgba(14,14,15,.85);color:var(--text-2);
+  font-size:12px;font-weight:600;letter-spacing:.04em;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .3s, transform .4s var(--ease-out)}
+body.inspect .put-back{opacity:1;transform:translate(-50%,0)}
+.put-back kbd{font:inherit;color:var(--text);border:1px solid var(--line);border-radius:4px;padding:0 5px}
+@media (pointer:coarse){.put-back .key{display:none}}
+
+/* ---------- chrome ---------- */
+.nav{position:fixed;top:0;left:0;right:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding-top:calc(18px + env(safe-area-inset-top,0px));padding-bottom:0;
+  padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px));
+  pointer-events:none;transition:opacity .35s, transform .5s var(--ease-out)}
+.nav > *{pointer-events:auto}
+.brand{display:inline-flex;align-items:center;gap:8px;color:var(--text);text-decoration:none;font-weight:800;font-size:13px;letter-spacing:.06em}
+.brand svg{width:15px;height:15px;fill:var(--text)}
+.links{display:flex;align-items:center;gap:22px}
+.links a.txt{color:var(--text-2);text-decoration:none;font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;transition:color .2s}
+.links a.txt:hover{color:var(--orange)}
+.bag{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;border:1px solid var(--line);color:var(--text-2);background:rgba(255,255,255,.02);transition:border-color .2s,color .2s}
+.bag:hover{border-color:var(--orange-line);color:var(--orange)}
+.bag svg{width:14px;height:14px}
+
+.foot{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;flex-direction:column;align-items:center;gap:14px;
+  padding-bottom:calc(28px + env(safe-area-inset-bottom,0px));
+  padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px));
+  pointer-events:none;transition:opacity .35s, transform .5s var(--ease-out)}
+.foot > *{pointer-events:auto}
+.season{margin:0;color:var(--muted);font-size:11px;font-weight:600;letter-spacing:.2em;text-transform:uppercase}
+.cta{display:inline-flex;align-items:center;gap:10px;padding:12px 24px;border-radius:999px;border:1px solid var(--orange-line);background:var(--orange-soft);
+  color:var(--orange);text-decoration:none;font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;transition:background .2s,color .2s,border-color .2s}
+.cta svg{width:11px;height:11px}
+.cta:hover{background:var(--orange);color:var(--on-orange);border-color:var(--orange)}
+
+.hint{position:fixed;z-index:5;margin:0;left:max(28px, env(safe-area-inset-left,0px));bottom:calc(38px + env(safe-area-inset-bottom,0px));
+  color:var(--muted);font-size:11px;font-weight:600;letter-spacing:.08em;transition:opacity .35s}
+.hint kbd{font:inherit;color:var(--text-2);border:1px solid var(--line);border-radius:4px;padding:1px 6px}
+
+a:focus-visible,button:focus-visible{outline:2px solid var(--orange);outline-offset:3px}
+
+.toast{position:fixed;left:50%;z-index:20;bottom:calc(118px + env(safe-area-inset-bottom,0px));transform:translate(-50%,8px);opacity:0;pointer-events:none;
+  background:var(--ink-raise);color:var(--text);border:1px solid var(--line);padding:10px 16px;border-radius:10px;font-size:13px;font-weight:600;
+  max-width:calc(100% - 32px);text-align:center;transition:opacity .2s,transform .2s}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast code{color:var(--orange);font-family:var(--mono);font-size:12px}
+
+/* ---------- leaving for FIRSTCAM ---------- */
+body.leaving .nav{opacity:0;transform:translateY(-12px);pointer-events:none}
+body.leaving .foot{opacity:0;transform:translateY(12px);pointer-events:none}
+body.leaving .hint,body.leaving .cap{opacity:0;pointer-events:none}
+body.leaving .bg{opacity:.35}
+body.leaving #rigV .face,body.leaving #rigV .edge,body.leaving #rigV .loop,body.leaving #rigV .glow,body.leaving .strand,body.leaving #tagF .loop{opacity:0}
+body.leaving .scene{pointer-events:none}
+.portal{position:fixed;left:0;top:0;z-index:30;transform-origin:0 0;overflow:hidden;will-change:transform;pointer-events:none}
+.portal .fi{position:absolute;left:0;top:0}
+.handoff{position:fixed;inset:0;z-index:31;display:grid;place-items:center;padding-inline:max(16px, env(safe-area-inset-left,0px));text-align:center;color:var(--navy);
+  opacity:0;transition:opacity .3s}
+.handoff.show{opacity:1}
+.handoff.night{color:#e8e6f5}
+.handoff p{margin:0 0 16px;font-size:15px;font-weight:600}
+.handoff .row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.handoff a,.handoff button{display:inline-flex;align-items:center;gap:8px;padding:12px 20px;border-radius:999px;font:700 12px/1 var(--font);letter-spacing:.14em;text-transform:uppercase;text-decoration:none;cursor:pointer}
+.handoff a{background:var(--crimson);color:#fff;border:1px solid var(--crimson)}
+.handoff button{background:transparent;color:inherit;border:1px solid currentColor}
+
+@media (max-width:900px){.hint{display:none}}
+@media (max-width:640px){.links{gap:14px}.links a.txt{font-size:10px;letter-spacing:.12em}.cap{padding:7px 11px;font-size:10px;letter-spacing:.12em}}
+@media (prefers-reduced-motion:reduce){.dot{animation:none}}
+</style>
+
+<div class="bg" aria-hidden="true">
+  <div class="spot" id="spot"></div>
+  <canvas id="dust"></canvas>
+</div>
+
+<main class="scene" id="scene">
+  <h1 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);margin:0">Vanguard, Fall / Winter 2024</h1>
+  <div class="world" id="world">
+
+    <!-- ===== Vanguard tag ===== -->
+    <div class="rig" id="rigV">
+      <span class="strand"></span><span class="strand"></span>
+      <div class="hang">
+        <div class="glow"></div>
+        <div class="tag3d" id="tagV" role="button" tabindex="0" aria-pressed="false" aria-label="Vanguard tag. Press to flip it and read the back.">
+          <span class="edge el"></span><span class="edge er"></span><span class="edge et"></span><span class="edge eb"></span>
+          <span class="loop"></span>
+          <div class="face front vg">
+            <div class="fi">
+              <span class="grom abs"></span>
+              <p class="vg-head abs">Pure Form.<br>Pure You.</p>
+              <div class="vg-logo abs"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 22 21h-6l-4-8-4 8H2z"/></svg>VANGUARD</div>
+              <div class="band abs"></div>
+              <span class="vg-url abs small">www.vanguard.build</span>
+              <svg class="arr abs" viewBox="0 0 24 24" fill="none" stroke="#ff5a1f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg>
+              <span class="rule abs" style="top:calc(var(--u)*83.2)"></span>
+              <svg class="bc vg-bc abs" data-seed="42" viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true"></svg>
+            </div>
+            <i class="shade"></i><i class="sheen"></i>
+          </div>
+          <div class="face back vg">
+            <div class="fi">
+              <span class="grom abs"></span>
+              <div class="vb abs">
+                <div class="lock"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 22 21h-6l-4-8-4 8H2z"/></svg>VANGUARD</div>
+                <div><span class="k">Style</span><span class="v">VG-FW24-017</span></div>
+                <div><span class="k">Fabric</span><span class="v">100% Merino Wool</span></div>
+                <div><span class="k">Origin</span><span class="v">Made in Portugal</span></div>
+                <div><span class="k">Size</span><div class="chips"><span>XS</span><span>S</span><span class="on">M</span><span>L</span><span>XL</span></div></div>
+                <div><span class="k">Care</span>
+                  <div class="care">
+                    <svg viewBox="0 0 24 24"><path d="M3 6l2.2 13h13.6L21 6"/><path d="M3.6 9.5c1.4-1.4 2.8-1.4 4.2 0s2.8 1.4 4.2 0 2.8-1.4 4.2 0 2.8 1.4 4.2 0"/></svg>
+                    <svg viewBox="0 0 24 24"><path d="M12 3.5 21.5 20h-19z"/><path d="M5 5l14 15M19 5 5 20"/></svg>
+                    <svg viewBox="0 0 24 24"><path d="M3 18h18v-4.5A5.5 5.5 0 0 0 15.5 8H8c-3 0-5 3.5-5 10z"/><path d="M15.5 8V5H9"/><circle cx="12" cy="13.5" r=".8" fill="currentColor"/></svg>
+                    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18"/><circle cx="12" cy="12" r="6"/><path d="M4 4l16 16M20 4 4 20"/></svg>
+                  </div>
+                </div>
+                <div><span class="k">Price</span><span class="price">THB 4,900</span></div>
+              </div>
+              <div class="band abs"></div>
+              <div class="vb-foot abs small"><span>Fall / Winter 2024</span><span>No. 0417</span></div>
+              <span class="rule abs" style="top:calc(var(--u)*83.2)"></span>
+              <svg class="bc vb-bc abs" data-seed="99" viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true"></svg>
+              <span class="vb-num abs small">4 006381 333931</span>
+            </div>
+            <i class="shade"></i><i class="sheen"></i>
+          </div>
+        </div>
+        <button class="cap" id="capV" type="button" tabindex="-1" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15.5-6.2L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M3 21v-5h5"/></svg>
+          <span id="capVText">Tap to flip</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ===== FIRSTCAM tag ===== -->
+    <div class="rig" id="rigF">
+      <span class="strand"></span><span class="strand"></span>
+      <div class="hang">
+        <div class="glow"></div>
+        <a class="tag3d" id="tagF" href="firstcam.html" draggable="false" aria-label="Open FIRSTCAM, the camera guide for first-time buyers">
+          <span class="edge el"></span><span class="edge er"></span><span class="edge et"></span><span class="edge eb"></span>
+          <span class="loop"></span>
+          <div class="face front fcf">
+            <div class="fi">
+              <span class="grom abs"></span>
+              <span class="fc-no abs small">No. 02 · Guide</span>
+              <p class="fc-word abs">FIRST<br>CAM</p>
+              <p class="fc-sub abs">Camera guide for first&#8209;time buyers</p>
+              <ul class="fc-list abs">
+                <li><span>Match quiz</span><span>01</span></li>
+                <li><span>Used prices</span><span>02</span></li>
+                <li><span>Budget</span><span>03</span></li>
+                <li><span>Checklist</span><span>04</span></li>
+              </ul>
+              <div class="band abs"></div>
+              <span class="fc-open abs small">Open guide</span>
+              <span class="fc-btn abs"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 9 9 3M4 3h5v5"/></svg></span>
+              <svg class="bc vg-bc abs" data-seed="7" viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true"></svg>
+            </div>
+            <i class="shade"></i><i class="sheen"></i>
+          </div>
+          <div class="face back fcb">
+            <div class="fi">
+              <span class="grom abs"></span>
+              <span class="fcb-k abs small">Survival guide</span>
+              <p class="fcb-word abs">FIRST<br>CAM</p>
+              <div class="fcb-strip abs">
+                <span class="small">Match quiz</span><span class="small">Used prices</span>
+                <span class="small">Budget</span><span class="small">Checklist</span>
+              </div>
+              <div class="fcb-count abs"><b>20 cameras</b><span>DSLR and mirrorless, rated for students</span></div>
+              <div class="band abs"></div>
+              <span class="fcb-open abs small">Open guide</span>
+              <span class="fc-btn abs"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 9 9 3M4 3h5v5"/></svg></span>
+              <svg class="bc vg-bc abs" data-seed="31" viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true"></svg>
+            </div>
+            <i class="shade"></i><i class="sheen"></i>
+          </div>
+        </a>
+        <a class="cap" id="capF" href="firstcam.html" tabindex="-1" aria-hidden="true" draggable="false">
+          <span class="dot"></span>Open FIRSTCAM
+          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 9 9 3M4 3h5v5"/></svg>
+        </a>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<header class="nav">
+  <a class="brand" href="#" data-next="index.html" data-label="Home" aria-label="Vanguard home">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 22 21h-6l-4-8-4 8H2z"/></svg>
+    VANGUARD
+  </a>
+  <nav class="links" aria-label="Main">
+    <a class="txt" href="#" data-next="collections.html" data-label="Collections">Collections</a>
+    <a class="txt" href="#" data-next="about.html" data-label="About">About</a>
+    <a class="bag" href="#" data-next="cart.html" data-label="Bag" aria-label="Shopping bag">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h14l-1 13H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>
+    </a>
+  </nav>
+</header>
+
+<footer class="foot">
+  <p class="season">Fall / Winter 2024</p>
+  <a class="cta" href="#" data-next="collection-fw24.html" data-label="Collection">
+    Explore Collection
+    <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 9 9 3M4 3h5v5"/></svg>
+  </a>
+</footer>
+
+<p class="hint">Drag a tag to spin it <span aria-hidden="true">·</span> <kbd>Esc</kbd> puts it back</p>
+<p class="put-back" aria-hidden="true">Tap anywhere to put it back<span class="key"> · <kbd>Esc</kbd></span></p>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+  'use strict';
+  const $ = s => document.querySelector(s);
+  const root = document.documentElement;
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+  const PI = Math.PI, TAU = Math.PI*2;
+
+  /* ---------- placeholder links ---------- */
+  const toast = $('#toast'); let toastTimer;
+  function showToast(html){ toast.innerHTML = html; toast.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(()=>toast.classList.remove('show'), 2400); }
+  document.querySelectorAll('[data-next]').forEach(a=>a.addEventListener('click', e=>{
+    if (a.getAttribute('href') === '#'){ e.preventDefault(); showToast(a.dataset.label + ' page coming soon · <code>' + a.dataset.next + '</code>'); }
+  }));
+
+  /* ---------- barcodes ---------- */
+  function rng(seed){ let s = seed; return ()=>{ s = (s*16807) % 2147483647; return s/2147483647; }; }
+  document.querySelectorAll('svg.bc').forEach(svg=>{
+    const r = rng(+svg.dataset.seed || 1); let x = 0, out = '';
+    while (x < 100){ const w = 1 + Math.floor(r()*4)*0.9; if (x + w > 100) break; out += `<rect x="${x.toFixed(2)}" y="0" width="${w.toFixed(2)}" height="40"/>`; x += w + 1 + Math.floor(r()*3)*0.9; }
+    svg.innerHTML = out;
+  });
+
+  /* ---------- tags ---------- */
+  function makeTag(id, restZ, phase, dropDelay){
+    const rig = $('#rig'+id);
+    return { rig, hang: rig.querySelector('.hang'), el: rig.querySelector('.tag3d'), strands: rig.querySelectorAll('.strand'),
+      cap: rig.querySelector('.cap'), back: rig.querySelector('.back'),
+      restZ, phase, dropDelay,
+      x:0, holeY:0, L:0,
+      rotY:0, vY:0, targetY:0, rotX:0, vX:0, sw:0, vS:0,
+      drop:null, vDrop:0, hov:0, vHov:0, lift:0, vLift:0,
+      hover:false, drag:null, suppressClick:false, last:{} };
+  }
+  const V = makeTag('V', -0.09, 0, 0);
+  const Fc = makeTag('F', 0.1, 1.7, 0.16);
+  const tags = [V, Fc];
+  const world = $('#world');
+  const state = { leaving:false, inspect:false, px:0, py:0, cpx:0, cpy:0, vw:0, vh:0, th:0, u:0, start:performance.now() };
+
+  // which way a tag is facing, from an angle that is a multiple of PI
+  const isOdd = a => Math.abs(Math.round(a/PI)) % 2 === 1;
+  const nearestEven = a => Math.round(a/TAU)*TAU;
+  const nearestOdd = a => PI + Math.round((a - PI)/TAU)*TAU;
+
+  /* ---------- dust in the light ---------- */
+  const dust = (function(){
+    const c = $('#dust'), g = c.getContext('2d');
+    let W = 0, H = 0; const P = [];
+    const r = rng(5);
+    function spawn(anyY){ return { x:r()*W, y: anyY ? r()*H : H + 10, s:0.5 + r()*1.6, v:6 + r()*14, a:0.15 + r()*0.45, ph:r()*6.28 }; }
+    function resize(){
+      W = c.width = Math.max(1, Math.round(innerWidth));
+      H = c.height = Math.max(1, Math.round(innerHeight));
+      if (!P.length && !reduce){ const n = Math.round(Math.min(70, W*H/22000)); for (let i=0;i<n;i++) P.push(spawn(true)); }
+    }
+    function draw(dt, t, lx, ly){
+      if (!P.length) return;
+      g.clearRect(0,0,W,H);
+      g.fillStyle = '#ffd2b0';
+      const reach = Math.max(W,H)*0.55;
+      for (const p of P){
+        p.y -= p.v*dt; p.x += Math.sin(t*0.6 + p.ph)*6*dt;
+        if (p.y < -10) Object.assign(p, spawn(false));
+        const lit = clamp(1 - Math.hypot(p.x - lx, p.y - ly)/reach, 0, 1);
+        g.globalAlpha = p.a * (0.15 + 0.85*lit) * (0.6 + 0.4*Math.sin(t*1.3 + p.ph));
+        g.beginPath(); g.arc(p.x, p.y, p.s, 0, 6.283); g.fill();
+      }
+      g.globalAlpha = 1;
+    }
+    return { resize, draw };
+  })();
+
+  /* ---------- layout ---------- */
+  const ANCHOR_Y = -60;
+  function layout(){
+    const vw = innerWidth, vh = innerHeight;
+    state.vw = vw; state.vh = vh;
+    const byH = (vh - 236) / 1.12, byW = (vw - 32) / 1.42;
+    const th = Math.min(byW, Math.max(150, Math.min(byH, 470)));
+    const u = th/100;
+    state.th = th; state.u = u;
+    root.style.setProperty('--u', u.toFixed(3) + 'px');
+    // centre the pair between the nav and the footer when there is spare height
+    const tagTop = 72 + Math.max(0, (vh - 72 - 130 - (1.12*th + 44))/2);
+    const cx = vw/2, sep = th*0.4;
+    V.x = cx - sep;  V.holeY = tagTop + 7*u;
+    Fc.x = cx + sep; Fc.holeY = tagTop + 13*u;
+    tags.forEach(T=>{
+      T.L = T.holeY - ANCHOR_Y;
+      const len = T.L - 11*u + 2400;
+      T.strands.forEach((s,i)=>{
+        s.style.top = '-2400px';
+        s.style.height = len.toFixed(1) + 'px';
+        s.style.transform = `rotate(${i ? 0.22 : -0.18}deg)`;
+      });
+      // caption sits under the tag's lowest point
+      const d = 93*u;
+      T.cap.style.left = (-d*Math.sin(T.restZ)).toFixed(1) + 'px';
+      T.cap.style.top = (d*Math.cos(T.restZ) + 3*u + 10).toFixed(1) + 'px';
+      if (T.drop === null) T.drop = reduce ? 0 : -(T.holeY + th + 220);
+    });
+    dust.resize();
+  }
+
+  /* ---------- light model ---------- */
+  const LX = -0.42, LY = -0.5, LZ = 0.757;   // from upper left, toward the viewer
+  function shadeTag(T){
+    const cb = Math.cos(T.rotX), sb = Math.sin(T.rotX), ca = Math.cos(T.rotY), sa = Math.sin(T.rotY);
+    const nx = cb*sa, ny = -sb, nz = cb*ca;
+    const d = nx*LX + ny*LY + nz*LZ;
+    const shF = (0.62*(1 - clamp(d*1.3, 0, 1))).toFixed(3);
+    const shB = (0.62*(1 - clamp(-d*1.3, 0, 1))).toFixed(3);
+    const off = nx*1.6 + state.cpx*0.35;
+    const shx = (off*-60).toFixed(1) + '%';
+    const sho = (0.25 + 0.75*clamp(1 - Math.abs(off), 0, 1)*Math.abs(nz)).toFixed(3);
+    const st = T.el.style, l = T.last;
+    if (l.shF !== shF){ st.setProperty('--shF', shF); l.shF = shF; }
+    if (l.shB !== shB){ st.setProperty('--shB', shB); l.shB = shB; }
+    if (l.shx !== shx){ st.setProperty('--shx', shx); l.shx = shx; }
+    if (l.sho !== sho){ st.setProperty('--sho', sho); l.sho = sho; }
+  }
+
+  /* ---------- Vanguard: flip to read ---------- */
+  function setInspect(on){
+    if (state.inspect === on) return;
+    state.inspect = on;
+    world.classList.toggle('inspect', on);
+    document.body.classList.toggle('inspect', on);
+    V.el.setAttribute('aria-pressed', on ? 'true' : 'false');
+    $('#capVText').textContent = on ? 'Tap to put back' : 'Tap to flip';
+  }
+  function flipV(){
+    V.targetY = isOdd(V.targetY) ? nearestEven(V.rotY) : nearestOdd(V.rotY);
+    if (!reduce) V.vS += 0.25;
+    setInspect(isOdd(V.targetY));
+  }
+  function unflipV(){ if (isOdd(V.targetY)){ V.targetY = nearestEven(V.rotY); setInspect(false); } }
+
+  /* ---------- dragging ---------- */
+  function bindDrag(T){
+    const el = T.el;
+    el.addEventListener('pointerdown', e=>{
+      if (state.leaving || e.button > 0) return;
+      if (e.pointerType === 'mouse') e.preventDefault();
+      T.drag = { x:e.clientX, y:e.clientY, sx:e.clientX, sy:e.clientY, t:performance.now(), moved:false };
+      try { el.setPointerCapture(e.pointerId); } catch(_){}
+    });
+    el.addEventListener('pointermove', e=>{
+      const D = T.drag; if (!D) return;
+      const now = performance.now(), dt = Math.max((now - D.t)/1000, 0.008);
+      const dx = e.clientX - D.x, dy = e.clientY - D.y;
+      if (!D.moved && Math.hypot(e.clientX - D.sx, e.clientY - D.sy) > 6){ D.moved = true; el.classList.add('dragging'); }
+      if (D.moved){
+        const k = 1 / Math.max(120, state.th*0.5);
+        T.rotY += dx*k;
+        T.vY = T.vY*0.5 + (dx*k/dt)*0.5;
+        T.rotX = clamp(T.rotX + dy*k*0.45, -0.6, 0.6);
+        T.vX = 0;
+        T.vS -= dx*0.0012;
+      }
+      D.x = e.clientX; D.y = e.clientY; D.t = now;
+    });
+    const end = ()=>{
+      const D = T.drag; if (!D) return;
+      T.drag = null; el.classList.remove('dragging');
+      if (D.moved){
+        T.suppressClick = true; setTimeout(()=>{ T.suppressClick = false; }, 0);
+        const flung = T.rotY + T.vY*0.22;
+        T.targetY = Math.round(flung/PI)*PI;
+        if (T === V) setInspect(isOdd(V.targetY));
+      }
+    };
+    el.addEventListener('pointerup', end);
+    el.addEventListener('pointercancel', end);
+    el.addEventListener('pointerenter', e=>{ if (e.pointerType === 'mouse'){ T.hover = true; T.cap.classList.add('hot'); } });
+    el.addEventListener('pointerleave', ()=>{ T.hover = false; T.cap.classList.remove('hot'); });
+  }
+  tags.forEach(bindDrag);
+
+  V.el.addEventListener('click', ()=>{ if (!V.suppressClick) flipV(); });
+  $('#capV').addEventListener('click', flipV);
+  function arrowSpin(T, e){
+    if (e.key === 'ArrowLeft'){ e.preventDefault(); T.vY -= 5; T.vS += .12; }
+    else if (e.key === 'ArrowRight'){ e.preventDefault(); T.vY += 5; T.vS -= .12; }
+  }
+  V.el.addEventListener('keydown', e=>{
+    if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); flipV(); }
+    else arrowSpin(V, e);
+  });
+  Fc.el.addEventListener('keydown', e=>arrowSpin(Fc, e));
+
+  // FIRSTCAM: tap, Enter or the caption opens it. Ctrl/Cmd/middle click keep the browser default (new tab).
+  function onFirstcamClick(e){
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
+    e.preventDefault();
+    if (Fc.suppressClick) return;
+    openFirstcam();
+  }
+  Fc.el.addEventListener('click', onFirstcamClick);
+  $('#capF').addEventListener('click', onFirstcamClick);
+  $('#capF').addEventListener('pointerenter', e=>{ if (e.pointerType === 'mouse') Fc.hover = true; });
+  $('#capF').addEventListener('pointerleave', ()=>{ Fc.hover = false; });
+
+  // empty space or Esc puts the Vanguard tag back
+  $('#scene').addEventListener('pointerdown', e=>{ if (state.inspect && !e.target.closest('#tagV,#capV')) unflipV(); });
+  addEventListener('keydown', e=>{ if (e.key === 'Escape' && state.inspect){ unflipV(); V.el.focus({preventScroll:true}); } });
+
+  addEventListener('pointermove', e=>{
+    if (e.pointerType !== 'mouse' || !state.vw) return;
+    state.px = (e.clientX/state.vw)*2 - 1;
+    state.py = (e.clientY/state.vh)*2 - 1;
+  }, {passive:true});
+  document.documentElement.addEventListener('pointerleave', ()=>{ state.px = 0; state.py = 0; });
+
+  /* ---------- hand-off to FIRSTCAM ---------- */
+  function firstcamColors(){
+    let theme = 'poster';
+    try { const t = JSON.parse(localStorage.getItem('fc_theme')); if (t === 'night') theme = 'night'; } catch(_){}
+    const probe = document.createElement('div');
+    probe.style.cssText = 'position:fixed;width:1px;height:1px;left:-9px;top:-9px';
+    probe.style.background = theme === 'night' ? '#020225' : '#E8EAED';   // fallback if color-mix is unsupported
+    probe.style.background = theme === 'night'
+      ? 'color-mix(in oklab, #100B66 52%, #000)'
+      : 'color-mix(in oklab, #FFFEF8 92%, #100B66)';   // exactly FIRSTCAM's page background
+    document.body.appendChild(probe);
+    const bg = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    return { theme, bg };
+  }
+
+  let portal = null, handoff = null, navTimer = 0, leaveTimer = 0;
+  function openFirstcam(){
+    if (state.leaving) return;
+    if (state.inspect) unflipV();
+    state.leaving = true;
+    document.body.classList.add('leaving');
+    Fc.hover = false; Fc.cap.classList.remove('hot');
+    Fc.targetY = nearestOdd(Fc.rotY);          // turn to the cream FIRSTCAM side
+    leaveTimer = setTimeout(expandPortal, reduce ? 60 : 680);
+  }
+
+  function expandPortal(){
+    if (!state.leaving) return;
+    const { theme, bg } = firstcamColors();
+    const face = Fc.back;
+    const r = face.getBoundingClientRect();
+    const w = face.offsetWidth, h = face.offsetHeight;
+    portal = document.createElement('div');
+    portal.className = 'portal fcb';
+    portal.style.width = w + 'px'; portal.style.height = h + 'px';
+    const radius = getComputedStyle(face).borderTopLeftRadius;
+    portal.style.borderRadius = radius;
+    portal.style.backgroundImage = 'none';
+    const inner = face.querySelector('.fi').cloneNode(true);
+    inner.style.width = w + 'px'; inner.style.height = h + 'px';
+    portal.appendChild(inner);
+    const start = `translate(${r.left.toFixed(2)}px, ${r.top.toFixed(2)}px) scale(${(r.width/w).toFixed(4)}, ${(r.height/h).toFixed(4)})`;
+    portal.style.transform = start;
+    document.body.appendChild(portal);
+    Fc.el.style.visibility = 'hidden';
+    const end = `translate(0px, 0px) scale(${(innerWidth/w).toFixed(4)}, ${(innerHeight/h).toFixed(4)})`;
+    inner.animate([{opacity:1},{opacity:0}], {duration: reduce ? 120 : 320, easing:'ease-out', fill:'forwards'});
+    const anim = portal.animate([
+      {transform:start, backgroundColor:'#FFFEF8', borderRadius:radius},
+      {transform:end, backgroundColor:bg, borderRadius:'0px'}
+    ], {duration: reduce ? 200 : 780, easing:'cubic-bezier(.76,0,.24,1)', fill:'forwards'});
+    anim.onfinish = ()=>{
+      if (!state.leaving) return;
+      try { sessionStorage.setItem('vg-to-firstcam', '1'); } catch(_){}
+      navTimer = setTimeout(()=>showHandoff(theme), 1600);
+      try { location.assign('firstcam.html'); } catch(_){ showHandoff(theme); }
+    };
+  }
+
+  // only shown when the browser stays on this page (some embedded previews block in-page navigation)
+  function showHandoff(theme){
+    if (handoff || !state.leaving) return;
+    handoff = document.createElement('div');
+    handoff.className = 'handoff' + (theme === 'night' ? ' night' : '');
+    handoff.innerHTML = '<div><p>FIRSTCAM is ready.</p><div class="row">' +
+      '<a href="firstcam.html" target="_blank" rel="noopener">Open FIRSTCAM <svg viewBox="0 0 12 12" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 9 9 3M4 3h5v5"/></svg></a>' +
+      '<button type="button">Back to Vanguard</button></div></div>';
+    document.body.appendChild(handoff);
+    requestAnimationFrame(()=>handoff && handoff.classList.add('show'));
+    handoff.querySelector('button').addEventListener('click', resetFromFirstcam);
+    handoff.querySelector('a').focus({preventScroll:true});
+  }
+
+  function resetFromFirstcam(){
+    clearTimeout(navTimer); clearTimeout(leaveTimer);
+    if (handoff){ handoff.remove(); handoff = null; }
+    if (portal){ portal.getAnimations().forEach(a=>a.cancel()); portal.remove(); portal = null; }
+    Fc.el.style.visibility = '';
+    Fc.targetY = nearestEven(Fc.rotY);
+    state.leaving = false;
+    document.body.classList.remove('leaving');
+    if (!reduce) Fc.vS += 0.3;
+  }
+  addEventListener('pageshow', e=>{ if (e.persisted && state.leaving) resetFromFirstcam(); });
+
+  /* ---------- frame loop ---------- */
+  const spot = $('#spot');
+  function spring(x, v, target, k, c, dt){ v += (-k*(x - target) - c*v)*dt; return [x + v*dt, v]; }
+  layout();
+  addEventListener('resize', layout);
+
+  const P = 1600;
+  function step(T, dt, t){
+    const leaving = state.leaving && T === Fc;
+    const sinceStart = (performance.now() - state.start)/1000 - T.dropDelay;
+    const idle = (reduce || leaving || T.lift > 0.05) ? 0 : 1;
+
+    // lift: Vanguard comes forward to be read; FIRSTCAM comes forward on its way out
+    const liftTarget = leaving ? 1 : (T === V && state.inspect) ? 1 : 0;
+    [T.lift, T.vLift] = spring(T.lift, T.vLift, liftTarget, leaving ? 110 : 60, leaving ? 21 : 15.5, dt);
+
+    if (!T.drag){
+      [T.rotY, T.vY] = spring(T.rotY, T.vY, T.targetY + idle*0.12*Math.sin(t*0.5 + T.phase), leaving ? 110 : 16, leaving ? 21 : 3.0, dt);
+      [T.rotX, T.vX] = spring(T.rotX, T.vX, idle*0.05*Math.sin(t*0.7 + T.phase), leaving ? 110 : 28, leaving ? 21 : 5, dt);
+    }
+    [T.sw, T.vS] = spring(T.sw, T.vS, idle*0.02*Math.sin(t*0.45 + T.phase), leaving ? 110 : 7, leaving ? 21 : 1.3, dt);
+    if (sinceStart > 0) [T.drop, T.vDrop] = spring(T.drop, T.vDrop, 0, 30, 6.2, dt);
+    [T.hov, T.vHov] = spring(T.hov, T.vHov, T.hover && !state.leaving ? 1 : 0, 170, 24, dt);
+
+    const th = state.th, u = state.u;
+    // how big the tag gets when it comes forward, limited by the screen
+    const s = Math.max(1, T === V
+      ? Math.min(state.vw < 640 ? 2 : 1.45, (state.vh*0.72)/th, (state.vw - 40)/(0.5*th))
+      : 1.3);
+    const zLift = P*(1 - 1/s);
+    const L = T.lift;
+    const oy = state.vh*0.38;                       // perspective origin, matches the CSS
+    const toCx = state.vw/2 - T.x;
+    const toCy = (oy + (state.vh*0.5 - oy)/s) - (T.holeY + 43*u);
+    T.rig.style.transform = `translate3d(${T.x.toFixed(2)}px, ${(ANCHOR_Y + T.drop).toFixed(2)}px, 0) rotateZ(${T.sw.toFixed(4)}rad)`;
+    T.hang.style.transform = `translate3d(${(L*toCx).toFixed(2)}px, ${(T.L + L*toCy).toFixed(2)}px, ${(L*zLift + T.hov*18).toFixed(2)}px)`;
+    const z = T.restZ*(1 - L) - T.sw*0.4;
+    T.el.style.transform = `rotateY(${T.rotY.toFixed(4)}rad) rotateX(${T.rotX.toFixed(4)}rad) rotateZ(${z.toFixed(4)}rad)`;
+    shadeTag(T);
+  }
+
+  let last = performance.now();
+  function frame(now){
+    const dt = Math.min(Math.max((now - last)/1000, 0), 1/30); last = now;
+    const t = now/1000;
+    state.cpx += (state.px - state.cpx)*0.06;
+    state.cpy += (state.py - state.cpy)*0.06;
+    tags.forEach(T=>step(T, dt, t));
+    const amb = reduce ? 0 : 1;
+    const rx = (-state.cpy*2.4 + amb*0.4*Math.sin(t*0.3)).toFixed(3);
+    const ry = (state.cpx*3.4 + amb*0.6*Math.sin(t*0.23)).toFixed(3);
+    world.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg)`;
+    const lx = state.vw*(0.5 + state.cpx*0.32), ly = state.vh*(0.4 + state.cpy*0.25);
+    spot.style.transform = `translate3d(${lx.toFixed(1)}px, ${ly.toFixed(1)}px, 0)`;
+    dust.draw(dt, t, lx, ly);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
